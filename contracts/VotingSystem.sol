@@ -17,11 +17,25 @@ contract VotingSystem {
         string description;
         uint votesCount;
     }
+    uint blockchainCreatedTime;
+
+    event VotingAdded(address indexed owner, uint indexed votingId, uint startTime, uint endTime);
+    event VotingRemoved(address indexed owner, uint indexed votingId);
+    event ChoiceAdded(uint indexed votingId, uint indexed choiceId, string description);
+    event VoteAdded(address indexed user, uint indexed votingId, uint indexed choiceId);
+    event BlockchainCreated();
+    
+
     mapping (address => mapping (uint => bool)) userChoices;
     mapping (address => mapping (uint => bool)) userVotes;
     Voting[] private votings;
     uint private lastVotingId = 0;
     uint private lastChoiceId = 0;
+    
+    constructor(){
+        blockchainCreatedTime = block.timestamp;
+        emit BlockchainCreated();
+    }
 
     modifier onlyOwnerOfVoting (address user, uint votingId){
         require(votings[votingId].owner == user, "You are not owner of this voting!");
@@ -65,11 +79,13 @@ contract VotingSystem {
             
             // Choice memory choice = Choice(++lastChoiceId, voting.choices[i].description, 0); 
             choices[i] = Choice(++lastChoiceId, voting.choices[i].description, 0);
-
+            emit ChoiceAdded(newVoting.votingId, choices[i].choiceId, choices[i].description);
         }
         newVoting.choices = choices;
 
         votings.push(voting);
+        emit VotingAdded(owner, newVoting.votingId, newVoting.startTime, newVoting.endTime);
+
         return true;
     }
 
@@ -87,6 +103,8 @@ contract VotingSystem {
         require(!votings[votingId].locked, "Voting is locked and cannot be removed!");
         votings[votingId] = votings[votings.length - 1];
         votings.pop();
+        emit VotingRemoved(user, votingId);
+
         return true;
     }
 
@@ -116,6 +134,7 @@ contract VotingSystem {
         votings[votingId].choices[choiceId].votesCount = votings[votingId].choices[choiceId].votesCount + 1;
         userChoices[user][choiceId] = true;
         userVotes[user][votingId] = true;
+        emit VoteAdded(user, votingId, choiceId);
         return true;
     } // problem is that 
 
